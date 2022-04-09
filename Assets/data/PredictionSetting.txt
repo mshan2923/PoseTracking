@@ -1,0 +1,1 @@
+{"Data":{"Threshold":0.30000001192092898,"PredictionDely":0.10000000149011612,"MovenmentSpeed":5.0,"RotationSpeed":5.0,"ArmPositionToInvisible":{"x":0.10000000149011612,"y":-1.0,"z":0.0},"InputLock":false,"OriginPosition":{"x":0.0,"y":20.0,"z":30.0},"MovementScaleOffset":{"x":1.0,"y":1.0,"z":1.0}}}
