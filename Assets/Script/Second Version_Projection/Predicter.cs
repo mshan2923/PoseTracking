@@ -34,7 +34,9 @@ public class Predicter : MonoBehaviour
         webcamTexture = new WebCamTexture(cameraName, 640, 480, 30);
 
         webcamTexture.Play();
-        cameraView.texture = webcamTexture;
+
+        if (cameraView != null)
+            cameraView.texture = webcamTexture;
 
         poseNet.Invoke(webcamTexture);
         results = poseNet.GetResults();
@@ -102,7 +104,8 @@ public class Predicter : MonoBehaviour
             poseNet.Invoke(webcamTexture);
             results = poseNet.GetResults();
 
-            cameraView.material = poseNet.transformMat;// set uv
+            if (cameraView != null)
+                cameraView.material = poseNet.transformMat;// set uv
 
             yield return (LoopDelay > Time.deltaTime) ? new WaitForSeconds(LoopDelay) : null;
         }

@@ -40,13 +40,43 @@ public class ModelTracer : MonoBehaviour
     public LineRenderer LeftLine;
     public float LineZ_Offser = 0;
 
-    public float Temp = 1;
+    [Space(10)]
+    public Map<BodyPart, Vector3> TransPos = new();
+    public Map<BodyPart, Vector3> SmoothPos = new();
+
+    public Vector3 ArmDefaultPosRate = Vector2.right;
+    public AnimationCurve HandZ_Limit_Mutiply = new AnimationCurve(new Keyframe(0, 1), new Keyframe(1, 0));
+    public float HandLimitAreaOffset = 0.1f;
+    public float HandZ_Limit = 0.1f;
+
+    bool SetLeftElbow = false;
+    bool SetRightElbow = false;
+
+    //public Vector3 LocalHand = Vector3.zero;
 
     void Start()
     {
         animator = GetComponent<Animator>();
 
         ModelDefaultPartDistance();
+
+        {
+            TransPos.Add(BodyPart.Hip, Vector3.zero);
+
+            TransPos.Add(BodyPart.Left_LowerArm, Vector3.zero);
+            TransPos.Add(BodyPart.Left_Hand, Vector3.zero);
+            TransPos.Add(BodyPart.Right_LowerArm, Vector3.zero);
+            TransPos.Add(BodyPart.Right_Hand, Vector3.zero);
+        }
+
+        {
+            SmoothPos.Add(BodyPart.Hip, Vector3.zero);
+
+            SmoothPos.Add(BodyPart.Left_LowerArm, Vector3.zero);
+            SmoothPos.Add(BodyPart.Left_Hand, Vector3.zero);
+            SmoothPos.Add(BodyPart.Right_LowerArm, Vector3.zero);
+            SmoothPos.Add(BodyPart.Right_Hand, Vector3.zero);
+        }
     }
 
     
@@ -77,6 +107,7 @@ public class ModelTracer : MonoBehaviour
         //Debug.Log("Resized Neck : " + ResizedNeckPos + " / RelativeResize LeftShoulder : " + (ResizeToModel(5) - ResizedNeckPos));
 
         gameObject.transform.position = ResizedNeckPos + Offset;//이건 아주 잘됨
+        //================================================================================================================================================ Body Pitch
 
         {
             {
@@ -136,51 +167,137 @@ public class ModelTracer : MonoBehaviour
         {
             // 7,8  , 9,10
 
-            //Debug.Log("Visible L_Elbow: " + (predicter.results[7].confidence > predicter.threshold) + " / Visible L_Hand : " + (predicter.results[8].confidence > predicter.threshold) +
-            //    "\n Visible R_Elbow: " + (predicter.results[9].confidence > predicter.threshold) + " / Visible R_Hand : " + (predicter.results[10].confidence > predicter.threshold));
-            //문제점 : 한손만 보일때 왼손과 오른손 위치가 같아지는 문제 + 팔꿈치도
-            //손만 인식은 되지않음 , 대신 손이 팔꿈치로 인식ㅋㅋㅋ
+            Vector3 Shoulder = GetBonePos(HumanBodyBones.LeftUpperArm);//ResizeToModel(5) + (Vector3.forward * Offset.z);
+            var Lelbow = Arm_Local_2DTo3D(5, 7, 2);
+            var Lhand = Arm_Local_2DTo3D(7, 9, 3);
 
-            //Debug.Log("Left => Shoulder - UpperArm : " + (ResizeToModel(5) - ResizeToModel(7)).normalized + " / UppderArm - LowerArm : " + (ResizeToModel(7) - ResizeToModel(9)).normalized);
+            //Vector3 W_Elbow = Shoulder + Lelbow;
+            SetTransPos(BodyPart.Left_LowerArm, Shoulder + Lelbow);
+            //Vector3 W_Hand = Shoulder + Lelbow + Lhand;
+            SetTransPos(BodyPart.Left_Hand, Shoulder + Lelbow + Lhand);
 
-            if (LeftLine != null && ((predicter.results[7].confidence > predicter.threshold) || (predicter.results[8].confidence > predicter.threshold)))
+            //AllReturnPool();
+
+            if (predicter.results[9].confidence < predicter.threshold)//왼쪽손 안보일때
             {
-                Vector3 Shoulder = ResizeToModel(5) + (Vector3.forward * Offset.z);
+                //빠르게 움직이면 손을 인식못함 /
 
-                var Lelbow = ((ResizeToModel(5) - ResizeToModel(7)).normalized * PartDistance.GetVaule(2));
-                Lelbow = new Vector3(Lelbow.x * -1, Lelbow.y * -1, Lelbow.z);
-                var Lhand = (ResizeToModel(7) - ResizeToModel(9)).normalized * PartDistance.GetVaule(3);
-                Lhand = new Vector3(Lhand.x * -1, Lhand.y * -1, Lhand.z);
+                if (predicter.results[7].confidence < predicter.threshold)
+                {
+                    //W_Hand = Shoulder + ArmDefaultPosRate * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3));
+                    SetTransPos(BodyPart.Left_Hand, Shoulder + ArmDefaultPosRate.normalized * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3)));
 
-                LeftLine.gameObject.SetActive(true);
-                LeftLine.SetPosition(0, Shoulder);
-                LeftLine.SetPosition(1, Shoulder + Lelbow);
-                LeftLine.SetPosition(2, (Shoulder + Lelbow + Lhand));
+                }//팔 전부 안보임
+                else
+                {
+                    //W_Hand = Shoulder + Lelbow.normalized * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3));
+                    SetTransPos(BodyPart.Left_Hand, Shoulder + Lelbow.normalized * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3)));// 이전값으로 덮어 쓰기
 
-                //ResizeToModel으로 길이 측정시 PartDistance의 기본값 보다 짧게 나온경우 짧게 나온만큼 팔을 앞으로
+                }//손만 안보임
 
-                animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, 1);
-                animator.SetIKHintPosition(AvatarIKHint.LeftElbow, Shoulder + Lelbow);
-                animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1);
-                animator.SetIKPosition(AvatarIKGoal.LeftHand, (Shoulder + Lelbow + Lhand));
-
+                SetLeftElbow = false;
             }
             else
             {
-                //손만 안보이는 경우 손을 팔꿈치 방향으로 
+                /*
+                float Xrate = GetTransPos(BodyPart.Left_Hand).x / (Shoulder.x + HandLimitAreaOffset);
+                if (Mathf.Abs(GetTransPos(BodyPart.Left_Hand).z) < HandZ_Limit_Mutiply.Evaluate(Xrate) * (Mathf.Abs(Shoulder.z) + HandZ_Limit))
+                {
+                    Vector3 W_Hand = GetTransPos(BodyPart.Left_Hand);
+                    W_Hand.z = Shoulder.z - (HandZ_Limit_Mutiply.Evaluate(Xrate) * HandZ_Limit);
+                    W_Hand = (W_Hand - GetTransPos(BodyPart.Left_LowerArm)).normalized * PartDistance.GetVaule(3) + GetTransPos(BodyPart.Left_LowerArm);
 
-                LeftLine.gameObject.SetActive(false);
+                    SetTransPos(BodyPart.Left_Hand, W_Hand);
+
+                }//Z Axis Limit
+                */
+                //Debug.Log("Rate : " + Xrate + " / Pos : " + GetTransPos(BodyPart.Left_Hand) + " / ");
+
+                SetLeftElbow = true;
             }
+        }//Left Hand
 
-            AllReturnPool();
+        {
+            // 7,8  , 9,10
 
+            Vector3 Shoulder = GetBonePos(HumanBodyBones.RightUpperArm);//ResizeToModel(5) + (Vector3.forward * Offset.z);
+            var Lelbow = Arm_Local_2DTo3D(6, 8, 4);
+            var Lhand = Arm_Local_2DTo3D(8, 10, 5);
 
+            //Vector3 W_Elbow = Shoulder + Lelbow;
+            SetTransPos(BodyPart.Right_LowerArm, Shoulder + Lelbow);
+            //Vector3 W_Hand = Shoulder + Lelbow + Lhand;
+            SetTransPos(BodyPart.Right_Hand, Shoulder + Lelbow + Lhand);
 
-            Vector3 debug_elbow = ResizeToModel(5) + Vector3.Scale((ResizeToModel(5) - ResizeToModel(7)), Vector3.one * -1) + (Vector3.forward * Offset.z);
+            //AllReturnPool();
 
-            GetPool().transform.position = ResizeToModel(5) + (Vector3.forward * Offset.z);
-            GetPool().transform.position = debug_elbow;
-            GetPool().transform.position = debug_elbow + Vector3.Scale((ResizeToModel(7) - ResizeToModel(9)), Vector3.one * -1);//비율 맞는듯 , 이게 더 나을수도
+            if (predicter.results[10].confidence < predicter.threshold)//왼쪽손 안보일때
+            {
+                //빠르게 움직이면 손을 인식못함 /
+
+                if (predicter.results[8].confidence < predicter.threshold)
+                {
+                    //W_Hand = Shoulder + ArmDefaultPosRate * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3));
+                    SetTransPos(BodyPart.Right_Hand, Shoulder + Vector3.Scale(ArmDefaultPosRate.normalized, new Vector3(-1, 1 ,1)) * (PartDistance.GetVaule(4) + PartDistance.GetVaule(5)));
+
+                }//팔 전부 안보임
+                else
+                {
+                    //W_Hand = Shoulder + Lelbow.normalized * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3));
+                    SetTransPos(BodyPart.Right_Hand, Shoulder + Lelbow.normalized * (PartDistance.GetVaule(4) + PartDistance.GetVaule(5)));// 이전값으로 덮어 쓰기
+
+                }//손만 안보임
+
+                SetRightElbow = false;
+            }
+            else
+            {
+                /*
+                float Xrate = GetTransPos(BodyPart.Right_Hand).x / (Shoulder.x - HandLimitAreaOffset);
+                if (Mathf.Abs(GetTransPos(BodyPart.Right_Hand).z) < HandZ_Limit_Mutiply.Evaluate(Xrate) * (Mathf.Abs(Shoulder.z) + HandZ_Limit))
+                {
+                    Vector3 W_Hand = GetTransPos(BodyPart.Right_Hand);
+                    W_Hand.z = Shoulder.z - (HandZ_Limit_Mutiply.Evaluate(Xrate) * HandZ_Limit);
+                    W_Hand = (W_Hand - GetTransPos(BodyPart.Right_LowerArm)).normalized * PartDistance.GetVaule(5) + GetTransPos(BodyPart.Right_LowerArm);
+
+                    SetTransPos(BodyPart.Right_Hand, W_Hand);
+                }//Z Axis Limit
+                */
+                SetRightElbow = true;
+            }
+        }//Right Hand
+
+        //손인식 완성하면 Smooth하게
+        {
+            {
+                if (SetLeftElbow)
+                {
+                    //GetPool("Elbow Point").transform.position = W_Elbow;
+
+                    animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, 1);
+                    animator.SetIKHintPosition(AvatarIKHint.LeftElbow, GetTransPos(BodyPart.Left_LowerArm));
+                }
+                //GetPool("Shoulder Point").transform.position = Shoulder;
+                //GetPool("Hand Point").transform.position = W_Hand;
+
+                animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1);
+                animator.SetIKPosition(AvatarIKGoal.LeftHand, GetTransPos(BodyPart.Left_Hand));
+            }//Left
+
+            {
+                if (SetRightElbow)
+                {
+                    //GetPool("Elbow Point").transform.position = W_Elbow;
+
+                    animator.SetIKHintPositionWeight(AvatarIKHint.RightElbow, 1);
+                    animator.SetIKHintPosition(AvatarIKHint.RightElbow, GetTransPos(BodyPart.Right_LowerArm));
+                }
+                //GetPool("Shoulder Point").transform.position = Shoulder;
+                //GetPool("Hand Point").transform.position = W_Hand;
+
+                animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 1);
+                animator.SetIKPosition(AvatarIKGoal.RightHand, GetTransPos(BodyPart.Right_Hand));
+            }//Right
         }
     }
 
@@ -207,13 +324,19 @@ public class ModelTracer : MonoBehaviour
         PartDistance.Add(BodyPart.Right_Knee, (GetBonePos(HumanBodyBones.RightUpperLeg) - GetBonePos(HumanBodyBones.RightLowerLeg)).magnitude);
         PartDistance.Add(BodyPart.Right_LowerArm, (GetBonePos(HumanBodyBones.RightLowerLeg) - GetBonePos(HumanBodyBones.RightFoot)).magnitude);
     }
-    public GameObject GetPool()
+    public GameObject GetPool(string Lname = "")
     {
         for (int i = 0; i < DebugPoints.Count; i++)
         {
             if (! DebugPoints[i].activeSelf)
             {
                 DebugPoints[i].SetActive(true);
+
+                if (!string.IsNullOrEmpty(Lname))
+                {
+                    DebugPoints[i].name = Lname;
+                }
+
                 return DebugPoints[i];
             }
         }
@@ -221,6 +344,12 @@ public class ModelTracer : MonoBehaviour
         var obj = GameObject.Instantiate(DebugObj);
         DebugPoints.Add(obj);
         obj.transform.SetParent(gameObject.transform);
+
+        if (! string.IsNullOrEmpty(Lname))
+        {
+            obj.name = Lname;
+        }
+
         return obj;
     }
     public void AllReturnPool()
@@ -230,6 +359,31 @@ public class ModelTracer : MonoBehaviour
             DebugPoints[i].SetActive(false);
         }
     }
+
+
+    public Vector3 GetTransPos(BodyPart part)
+    {
+        return TransPos.Get().Find(t => t.Key == part).Vaule;
+    }
+    public bool SetTransPos(BodyPart part, Vector3 pos)
+    {
+        int index = TransPos.Get().FindIndex(t => t.Key == part);
+
+        TransPos.SetVaule(index, pos);
+        return index >= 0;
+    }
+    public Vector3 GetSmoothPos(BodyPart part)
+    {
+        return SmoothPos.Get().Find(t => t.Key == part).Vaule;
+    }
+    public bool SetSmoothPos(BodyPart part, Vector3 pos)
+    {
+        int index = SmoothPos.Get().FindIndex(t => t.Key == part);
+
+        SmoothPos.SetVaule(index, pos);
+        return index >= 0;
+    }
+
 
     public Vector2 RateToScreenPos(RectTransform canvasRect, Vector2 rate)
     {
@@ -250,4 +404,75 @@ public class ModelTracer : MonoBehaviour
         //        Debug.Log("RatioToUI : " + (Z_Position / CanvasRect.position.z) + " / Ratio Position : " + (RateToUIWorldPos(CanvasRect, predicter.Result(5)) * (Z_Position / CanvasRect.position.z)));
         return (RateToUIWorldPos(CanvasRect, predicter.Result(PartIndex)) * (Z_Position / CanvasRect.position.z));
     }//시야기준
+
+
+    public Vector3 Arm_Local_2DTo3D(Vector3 Parent, Vector3 Target, int PartDistanceIndex)
+    {
+        {
+            /*
+Vector3 Shoulder = ResizeToModel(5) + (Vector3.forward * Offset.z);
+var Lelbow = ((ResizeToModel(5) - ResizeToModel(7)).normalized * PartDistance.GetVaule(2));
+Lelbow = new Vector3(Lelbow.x * -1, Lelbow.y * -1, Lelbow.z);
+var Lhand = (ResizeToModel(7) - ResizeToModel(9)).normalized * PartDistance.GetVaule(3);
+Lhand = new Vector3(Lhand.x * -1, Lhand.y * -1, Lhand.z);
+*/
+        }//Legacy - Notuse
+
+        Vector3 Elbow_2D = Vector3.Scale((Parent - Target), Vector3.one * -1);
+        float Elbow_2D_Dis = Elbow_2D.magnitude;
+        float Elbow_2D_DisRate = 0;
+
+
+        if (Elbow_2D_Dis > PartDistance.GetVaule(PartDistanceIndex))
+        {
+            Elbow_2D = Elbow_2D.normalized * PartDistance.GetVaule(PartDistanceIndex);
+            Elbow_2D_DisRate = 1;
+        }
+        else
+        {
+            Elbow_2D_DisRate = Elbow_2D_Dis / PartDistance.GetVaule(PartDistanceIndex);
+        }
+
+        float z = Mathf.Sin(Mathf.Acos(Elbow_2D_DisRate)) * PartDistance.GetVaule(PartDistanceIndex);
+
+        // 팔길이 * Sin ( ACos (2D 길이 / 팔길이)) = Z축
+
+        return new Vector3(Elbow_2D.x, Elbow_2D.y, z * -1);
+    }
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="ParentPartIndex">
+    /// LeftUpper : 5 / LeftHand : 7</param>
+    /// <param name="TargetPartIndex">
+    /// LeftUpper : 7/ LeftHand : 9</param>
+    /// <param name="PartDistanceIndex">
+    /// LeftUpper : 2/ LeftHand : 3</param>
+    /// <returns></returns>
+    public Vector3 Arm_Local_2DTo3D(int ParentPartIndex, int TargetPartIndex, int PartDistanceIndex)
+    {
+        /*
+        Vector3 Elbow_2D = Vector3.Scale((ResizeToModel(ParentPartIndex) - ResizeToModel(TargetPartIndex)), Vector3.one * -1) * Z_Position;
+        float Elbow_2D_Dis = Elbow_2D.magnitude;
+        float Elbow_2D_DisRate = 0;
+
+
+        if (Elbow_2D_Dis > PartDistance.GetVaule(PartDistanceIndex))
+        {
+            Elbow_2D = Elbow_2D.normalized * PartDistance.GetVaule(PartDistanceIndex);
+            Elbow_2D_DisRate = 1;
+        }
+        else
+        {
+            Elbow_2D_DisRate = Elbow_2D_Dis / PartDistance.GetVaule(PartDistanceIndex);
+        }
+
+        float z = Mathf.Sin(Mathf.Acos(Elbow_2D_DisRate)) * PartDistance.GetVaule(PartDistanceIndex);
+
+        // 팔길이 * Sin ( ACos (2D 길이 / 팔길이)) = Z축
+
+        return new Vector3(Elbow_2D.x, Elbow_2D.y, z * -1);
+        */
+        return Arm_Local_2DTo3D(ResizeToModel(ParentPartIndex), ResizeToModel(TargetPartIndex), PartDistanceIndex);
+    }
 }

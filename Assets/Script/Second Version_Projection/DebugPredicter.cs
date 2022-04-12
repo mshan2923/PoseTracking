@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using TensorFlowLite;
+using UnityEngine.UI;
 
 public class DebugPredicter : MonoBehaviour
 {
@@ -10,6 +11,8 @@ public class DebugPredicter : MonoBehaviour
     RectTransform Canvas;
     public GameObject DebugPointer;
     public Vector2 PointerSize = Vector2.one * 10;
+
+    public Text FPSPanel;
 
     Queue<GameObject> Pointers = new Queue<GameObject>();
     Map<PoseNet.Part, GameObject> ActivePointer = new();//Map<Predicter.Slot,Gameobject>으로 변경
@@ -60,6 +63,11 @@ public class DebugPredicter : MonoBehaviour
             {
                 AllReturnPool();
             }
+        }
+
+        if (FPSPanel != null)
+        {
+            FPSPanel.text = (1 / Time.deltaTime).ToString("000.##");
         }
     }
 
