@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 0903ade7840d92d409f918fd5dd99899
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - predictor: {instanceID: 0}
+  - CanvasRect: {instanceID: 0}
+  - CameraView: {instanceID: 0}
+  - DebugObj: {fileID: 3460215014411829058, guid: 50174e37c42874045b9d11e3ebe9a814,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
