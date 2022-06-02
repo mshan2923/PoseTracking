@@ -244,6 +244,10 @@ public class Predictor : MonoBehaviour//=================MoveNetVisualizer Âü°íÇ
 
         return 0.01f * Z_Pos * pos;
     }
+    public bool Visible(int index)
+    {
+        return results[index].Confidence > threshold;
+    }
 }
 
 #if UNITY_EDITOR

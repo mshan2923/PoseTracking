@@ -198,11 +198,12 @@ public class Project2DTo3D : MonoBehaviour
 
         {
             {
-                Vector3 NosePos = predictor.RateToWorldPos(0);
+                Vector3 NosePos = ResizeToModle(0);
                 //AverageShoulder
                 //PartDistance[1]
-                HeadRotationRate.y = ((NosePos.x - AverageShoulder.x) * HeadRotationMultiply.y) / PartDistance.GetVaule(1) * -1;
+                HeadRotationRate.y = ((NosePos.x - AverageShoulder.x) / PartDistance.GetVaule(1)) * -1 * HeadRotationMultiply.y;
                 HeadRotationRate.y = Mathf.Clamp(HeadRotationRate.y, -1, 1);
+
             }//Head Yaw
 
             {
@@ -255,58 +256,110 @@ public class Project2DTo3D : MonoBehaviour
         {
             Vector3 ElbowOffset = gameObject.transform.forward * -0.01f;
 
+            //GetPool("test");//========================================================================== 팔 부분 계산방식을 다시 , 상태에 따라서 결정하게
+            //============  손위치 (모델 스케일기준), 방향 > 팔꿀치 예측
+
             //ResizeToModle 위치를 믿지 못하니까 방향 * 부위길이로 좌표 전달
             {
-                
+
                 Vector3 L_Hand;
                 Vector3 L_Elbow = Arm_IK(true, ElbowOffset, DefaultPosRate, out L_Hand);
 
-                ActiveLeftElbowIK = !Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
+                {
+                    //Debug.Log("Hand Offset : " + (predictor.results[7].Position - predictor.results[5].Position) +
+                    //    "Rescale : " + (predictor.results[7].Position - predictor.results[5].Position).normalized * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3)));
+                    Vector3 LocalHand = (predictor.results[9].Position - predictor.results[5].Position);
+                    Vector3 LocalElbow = (predictor.results[7].Position - predictor.results[5].Position);
+                    if (predictor.Visible(7) && predictor.Visible(9))
+                    {
+                        //====Elbow는 LocalElbow.normalized 해서 모델의 UpperArm 길이 적용한거리 => 모델스케일 Elobw
+                        //====Hand는 (LocalHand - LocalElbow).normalized * 모델의 LowerArm 길이 + 모델스케일 Elobw => 모델 스케일 Hand
 
-                if (ActiveLeftElbowIK)
+                        L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2);
+                        L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3) + L_Elbow;
+
+                        GetPool("ReScaled Left Elbow").transform.position = L_Elbow;
+                        GetPool("ReScaled Left Hand").transform.position = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3)
+                            + (GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2));
+                        //===========2D 기준 위치 , 보정작업하면 될듯?
+
+                        L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.LeftUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(2), PartDistance.GetVaule(3), out L_Hand);
+
+                        GetPool("IkLeft Elbow").transform.position = L_Elbow;
+                        GetPool("IkLeft Hand").transform.position = L_Hand;
+                    }//Visible Elbow, Hand
+                    else if ((predictor.Visible(7) == false) && predictor.Visible(9))
+                    {
+                        // 계산식을 좀 바꿔야함
+                        //음... 팔꿈치 위치를 기본 위치로해서 보정하면?
+                        
+                        L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + DefaultPosRate.normalized * PartDistance.GetVaule(2);
+                        //L_Hand = (L)// 2 방향... 1 임의의 좌표...
+                        //    elbow는 기본위치에 고정 되어있고, 손만 입력을 받아 움ㅈ직임 , 움직임 비율을 어께너비와 비례해서
+
+                        //float handRate = (predictor.results[9].Position - predictor.results[5].Position).magnitude / AverageShoulder.magnitude;
+
+                    }//Visible Hand
+                    else if (predictor.Visible(7) && ((predictor.Visible(9) == false)))
+                    {
+                        //손 위치만 방향에 맞춰서
+
+                    }//Visible Elbow
+                    else
+                    {
+                        // 기본위치로 / DefaultPosRate 방향에 맞춰서 
+
+                    }//No Visible Elbow, Hand
+
+
+                }//Test /=========== 전부 보일때 성공!! / 한부위라도 안보이면 ...안됨 , 팔꿈치 안보일땐 불안정 , 팔꿈치만 보이면  손위치 0,0,0 이 되서
+
+
+                ActiveLeftElbowIK = predictor.results[7].Confidence > predictor.threshold;//=========== False 일때 문제발생, Elbow를 보정된 기본 위치로
+                                          //!Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
+
+                //if (ActiveLeftElbowIK)
                     SetTransPos(BodyPart.Left_Elbow, L_Elbow);
                 SetTransPos(BodyPart.Left_Hand, L_Hand);
-                
-            }
+
+            }//Left Hand, Elbow
             {
                 Vector3 L_Hand;
                 Vector3 L_Elbow = Arm_IK(false, ElbowOffset, DefaultPosRate, out L_Hand);
 
-                ActiveRightElbowIK = !Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
+                ActiveRightElbowIK = false;// predictor.results[8].Confidence < predictor.threshold;
+                // !Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
 
                 if (ActiveRightElbowIK)
                     SetTransPos(BodyPart.Right_Elbow, L_Elbow);
                 SetTransPos(BodyPart.Right_Hand, L_Hand);
-            }
-
-            //Update에서 팔 IK 적용
-
+            }//Right Hand, Elbow
         }//팔 IK
 
+        animator.SetBoneLocalRotation(HumanBodyBones.Head, Quaternion.Euler((HeadRotationRate * 90)));
         {
-            animator.SetBoneLocalRotation(HumanBodyBones.Head, Quaternion.Euler((HeadRotationRate * 90)));
 
             {
-                            /*
-            if (ActiveLeftElbowIK)
-            {
-                animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, 0);
-                animator.SetIKHintPosition(AvatarIKHint.LeftElbow, GetTransPos(BodyPart.Left_LowerArm));
-            }
-            if (ActiveRightElbowIK)
-            {
-                animator.SetIKHintPositionWeight(AvatarIKHint.RightElbow, 0);
-                animator.SetIKHintPosition(AvatarIKHint.RightElbow, GetTransPos(BodyPart.Right_LowerArm));
-            }
-            animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1);
-            animator.SetIKPosition(AvatarIKGoal.LeftHand, GetTransPos(BodyPart.Left_Hand));
-            animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 1);
-            animator.SetIKPosition(AvatarIKGoal.RightHand, GetTransPos(BodyPart.Right_Hand));
-            *///기존 방법 , 떨리면서 배치문제
+                /*
+if (ActiveLeftElbowIK)
+{
+    animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, 0);
+    animator.SetIKHintPosition(AvatarIKHint.LeftElbow, GetTransPos(BodyPart.Left_LowerArm));
+}
+if (ActiveRightElbowIK)
+{
+    animator.SetIKHintPositionWeight(AvatarIKHint.RightElbow, 0);
+    animator.SetIKHintPosition(AvatarIKHint.RightElbow, GetTransPos(BodyPart.Right_LowerArm));
+}
+animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1);
+animator.SetIKPosition(AvatarIKGoal.LeftHand, GetTransPos(BodyPart.Left_Hand));
+animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 1);
+animator.SetIKPosition(AvatarIKGoal.RightHand, GetTransPos(BodyPart.Right_Hand));
+*///기존 방법 , 떨리면서 배치문제
 
-            //gameObject.transform.TransformPoint (Local 2 Wolrd) / gameObject.transform.InverseTransformPoint (Wolrd 2 Local )
-            //SetBoneLocalRotation이 팔,다리 부분엔 안되는듯, 내머리론 이해안됨 , 로컬 2 월드 변환해서 가져오는것도 안됨
-            //SetIKPosition을 썻을때 떨리는 조건 찾기
+                //gameObject.transform.TransformPoint (Local 2 Wolrd) / gameObject.transform.InverseTransformPoint (Wolrd 2 Local )
+                //SetBoneLocalRotation이 팔,다리 부분엔 안되는듯, 내머리론 이해안됨 , 로컬 2 월드 변환해서 가져오는것도 안됨
+                //SetIKPosition을 썻을때 떨리는 조건 찾기
             }//Legacy Set ArmPosition - Disabled / Prablem : Shake Arm
 
             {
@@ -352,11 +405,11 @@ public class Project2DTo3D : MonoBehaviour
 
             //============================================================================================/ 리타겟팅 좌표는 맞지만 , 직접 값을 집어넣으면 작동안됨 / AnimationRigging으로 팔위치 지정
             //=======어깨도... 움직이게 해야겠지?, 
-        }
+        }//Disable / Legacy ArmPosition
     }
 
     /// <summary>
-    /// OnAnimatorIK() => Not Apply Animation , Update() => Apply Animation
+    /// OnAnimatorIK() => Not Apply Animation? , Update() => Apply Animation
     /// </summary>
     /// <param name="bone"></param>
     /// <returns></returns>
@@ -387,7 +440,11 @@ public class Project2DTo3D : MonoBehaviour
         PartDistance.Add(BodyPart.Right_Knee, (GetBonePos(HumanBodyBones.RightUpperLeg) - GetBonePos(HumanBodyBones.RightLowerLeg)).magnitude);
         PartDistance.Add(BodyPart.Right_Elbow, (GetBonePos(HumanBodyBones.RightLowerLeg) - GetBonePos(HumanBodyBones.RightFoot)).magnitude);
     }
-    //Not Accurate /정확하지 않음
+    /// <summary>
+    /// Not Accurate /정확하지 않음 / 스크린 기준
+    /// </summary>
+    /// <param name="resultIndex"></param>
+    /// <returns></returns>
     public Vector3 ResizeToModle(int resultIndex)
     {
         Vector3 pos = predictor.RateToWorldPos(resultIndex, Z_Position);
@@ -506,7 +563,7 @@ public class Project2DTo3D : MonoBehaviour
             hand.z = LhandZ;
 
             iked_Elbow = Arm_IK(shoulder, shoulder + elbow, shoulder + elbow + hand, ElbowOffset, UpperArmDistance, LowerArmDistance, out iked_Hand);//Visible Elbow, Hand
-        }else if (VisibleElbow)
+        } else if (VisibleElbow)
         {
             iked_Elbow = Arm_IK(shoulder, shoulder + elbow, shoulder + elbow + (elbow.normalized * LowerArmDistance), ElbowOffset, UpperArmDistance, LowerArmDistance, out iked_Hand);//Visible Elbow, Hand
 
@@ -515,7 +572,7 @@ public class Project2DTo3D : MonoBehaviour
         }
         else if (VisibleHand)
         {
-            
+
             float UIShoulderLength = (predictor.results[5].Position - predictor.results[6].Position).magnitude;
             float UIShoulderToHand = 0;
             Vector3 elbowAddOffset = Vector3.down;
@@ -528,7 +585,7 @@ public class Project2DTo3D : MonoBehaviour
 
                 elbowAddOffset += gameObject.transform.right * -1;
             }
-            else 
+            else
             {
                 UIShoulderToHand = (predictor.results[10].Position - predictor.results[6].Position).magnitude;
 
@@ -749,7 +806,7 @@ public class Project2DTo3D : MonoBehaviour
     {
         for (int i = 0; i < DebugPoints.Count; i++)
         {
-            if (! DebugPoints[i].activeSelf)
+            if (!DebugPoints[i].activeSelf)
             {
                 DebugPoints[i].SetActive(true);
 
@@ -774,7 +831,7 @@ public class Project2DTo3D : MonoBehaviour
             }
 
             return obj;
-        }else
+        } else
         {
             return null;
         }
