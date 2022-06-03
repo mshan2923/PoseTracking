@@ -45,9 +45,10 @@ public class Project2DTo3D : MonoBehaviour
     [Space(5)]
     public Map<BodyPart, GameObject> IK_Target = new();
 
-    public float Arm_ZLimitOffsetRate = 0.1f;
+    public float Arm_ZLimitOffsetRate = 0.1f;//중심과 더 먼곳부터 팔 앞으로
     public AnimationCurve Arm_ZLimitCurve = new(new Keyframe(0, 0), new Keyframe(1, 1));
     public float Arm_ZLimit = 0.125f;
+    public float ShoulderWidth = 0.75f;//Elbow는 안보이고 손만 보일때 손의 이동거리와 비례
 
     //[Space(10)]
     //public LineRenderer LeftLine;
@@ -254,89 +255,157 @@ public class Project2DTo3D : MonoBehaviour
         }//Head (-1 ~ 1)
 
         {
-            Vector3 ElbowOffset = gameObject.transform.forward * -0.01f;
+            Vector3 ElbowOffset = gameObject.transform.forward * -0.01f;// 팔꿈치가 앞으로 나오지 않게함
 
-            //GetPool("test");//========================================================================== 팔 부분 계산방식을 다시 , 상태에 따라서 결정하게
-            //============  손위치 (모델 스케일기준), 방향 > 팔꿀치 예측
-
-            //ResizeToModle 위치를 믿지 못하니까 방향 * 부위길이로 좌표 전달
             {
 
                 Vector3 L_Hand;
-                Vector3 L_Elbow = Arm_IK(true, ElbowOffset, DefaultPosRate, out L_Hand);
+                Vector3 L_Elbow;
 
+                //Debug.Log("Hand Offset : " + (predictor.results[7].Position - predictor.results[5].Position) +
+                //    "Rescale : " + (predictor.results[7].Position - predictor.results[5].Position).normalized * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3)));
+                Vector3 LocalHand = (predictor.results[9].Position - predictor.results[5].Position);
+                Vector3 LocalElbow = (predictor.results[7].Position - predictor.results[5].Position);
+                if (predictor.Visible(7) && predictor.Visible(9))
                 {
-                    //Debug.Log("Hand Offset : " + (predictor.results[7].Position - predictor.results[5].Position) +
-                    //    "Rescale : " + (predictor.results[7].Position - predictor.results[5].Position).normalized * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3)));
-                    Vector3 LocalHand = (predictor.results[9].Position - predictor.results[5].Position);
-                    Vector3 LocalElbow = (predictor.results[7].Position - predictor.results[5].Position);
-                    if (predictor.Visible(7) && predictor.Visible(9))
+                    //====Elbow는 LocalElbow.normalized 해서 모델의 UpperArm 길이 적용한거리 => 모델스케일 Elobw
+                    //====Hand는 (LocalHand - LocalElbow).normalized * 모델의 LowerArm 길이 + 모델스케일 Elobw => 모델 스케일 Hand
+
+                    L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2);
+                    L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3) + L_Elbow;
+
+                    L_Hand = HandZLimit(L_Hand);
+                    GetPool("L Hand").transform.position = L_Hand;
+
+                    //GetPool("ReScaled Left Elbow").transform.position = L_Elbow;
+                    //GetPool("ReScaled Left Hand").transform.position = L_Hand;
+                    //===========2D 기준 위치 , 보정작업하면 될듯?
+
+                    L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.LeftUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(2), PartDistance.GetVaule(3), out L_Hand);
+
+                    //GetPool("IkLeft Elbow").transform.position = L_Elbow;
+                    //GetPool("IkLeft Hand").transform.position = L_Hand;
+                }//Visible Elbow, Hand => 인식률 매우 좋음!!
+                else if ((predictor.Visible(7) == false) && predictor.Visible(9))
+                {
+                    // 계산식을 좀 바꿔야함
+                    //음... 팔꿈치 위치를 기본 위치로해서 보정하면?
+
+                    L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + DefaultPosRate.normalized * PartDistance.GetVaule(2);
+                    //L_Hand = L_Elbow + DefaultPosRate.normalized * PartDistance.GetVaule(3);//====임시용 기본위치
+
+                    //GetPool("Default Elbow").transform.position = L_Elbow;
                     {
-                        //====Elbow는 LocalElbow.normalized 해서 모델의 UpperArm 길이 적용한거리 => 모델스케일 Elobw
-                        //====Hand는 (LocalHand - LocalElbow).normalized * 모델의 LowerArm 길이 + 모델스케일 Elobw => 모델 스케일 Hand
-
-                        L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2);
-                        L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3) + L_Elbow;
-
-                        GetPool("ReScaled Left Elbow").transform.position = L_Elbow;
-                        GetPool("ReScaled Left Hand").transform.position = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3)
-                            + (GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2));
-                        //===========2D 기준 위치 , 보정작업하면 될듯?
-
-                        L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.LeftUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(2), PartDistance.GetVaule(3), out L_Hand);
-
-                        GetPool("IkLeft Elbow").transform.position = L_Elbow;
-                        GetPool("IkLeft Hand").transform.position = L_Hand;
-                    }//Visible Elbow, Hand
-                    else if ((predictor.Visible(7) == false) && predictor.Visible(9))
-                    {
-                        // 계산식을 좀 바꿔야함
-                        //음... 팔꿈치 위치를 기본 위치로해서 보정하면?
-                        
-                        L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + DefaultPosRate.normalized * PartDistance.GetVaule(2);
-                        //L_Hand = (L)// 2 방향... 1 임의의 좌표...
                         //    elbow는 기본위치에 고정 되어있고, 손만 입력을 받아 움ㅈ직임 , 움직임 비율을 어께너비와 비례해서
+                        float LocalHandDis = Mathf.Clamp01((predictor.results[9].Position - predictor.results[5].Position).magnitude / (predictor.results[5].Position - predictor.results[6].Position).magnitude);
+                        L_Hand = GetBonePos(HumanBodyBones.LeftUpperArm) + LocalHandDis * Vector3.right * ((GetBonePos(HumanBodyBones.LeftUpperArm) - GetBonePos(HumanBodyBones.RightUpperArm)).magnitude) * ShoulderWidth;
+                        //GetPool("Hand Pos").transform.position = L_Hand;
+                    }//어께너비 비례해서 손위치 대강 잡고 , 보정 
+
+                    L_Hand = HandZLimit(L_Hand);
+                    GetPool("L Hand").transform.position = L_Hand;
+
+                    {
+                        //빠르게 흔들면 인식자체가 잘안됨 , 인식률 0.08까지 내려가던데
+                        //암튼 됨! 이제 천천히 흔들때 잠깐 멈출때 인식해서 손흔드는거 인식됨!!
+                        //
+
+
+                        //====================Math.ContactTwoCircle() 이거 사용해서 (어깨너비 비례 어깨에서 손까지 거리) 와 (LowerArm 길이) 를 충족하는 손 위치지점 구하기
 
                         //float handRate = (predictor.results[9].Position - predictor.results[5].Position).magnitude / AverageShoulder.magnitude;
+                        //L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.LeftUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(2), PartDistance.GetVaule(3), out L_Hand);
 
-                    }//Visible Hand
-                    else if (predictor.Visible(7) && ((predictor.Visible(9) == false)))
-                    {
-                        //손 위치만 방향에 맞춰서
+                        //GetPool("IkLeft Elbow_Test").transform.position = L_Elbow;
+                        //GetPool("IkLeft Hand_Test").transform.position = L_Hand;
+                        //보정을 하니깐 오히려...안됨
+                    }//코맨트
 
-                    }//Visible Elbow
-                    else
-                    {
-                        // 기본위치로 / DefaultPosRate 방향에 맞춰서 
+                }//Visible Hand
+                else if (predictor.Visible(7) && ((predictor.Visible(9) == false)))
+                {
+                    //손 위치만 방향에 맞춰서
+                    L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2);
+                    L_Hand = L_Elbow + LocalElbow.normalized * PartDistance.GetVaule(3);
 
-                    }//No Visible Elbow, Hand
+                    L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.LeftUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(2), PartDistance.GetVaule(3), out L_Hand);
+                }//Visible Elbow
+                else
+                {
+                    // 기본위치로 / DefaultPosRate 방향에 맞춰서 
+                    L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + DefaultPosRate.normalized * PartDistance.GetVaule(2);
+                    L_Hand = L_Elbow + DefaultPosRate.normalized * PartDistance.GetVaule(3);
 
+                    L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.LeftUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(2), PartDistance.GetVaule(3), out L_Hand);
 
-                }//Test /=========== 전부 보일때 성공!! / 한부위라도 안보이면 ...안됨 , 팔꿈치 안보일땐 불안정 , 팔꿈치만 보이면  손위치 0,0,0 이 되서
+                }//No Visible Elbow, Hand
 
-
-                ActiveLeftElbowIK = predictor.results[7].Confidence > predictor.threshold;//=========== False 일때 문제발생, Elbow를 보정된 기본 위치로
-                                          //!Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
+                //ActiveLeftElbowIK = predictor.results[7].Confidence > predictor.threshold;//=========== False 일때 문제발생, Elbow를 보정된 기본 위치로
+                //!Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
 
                 //if (ActiveLeftElbowIK)
-                    SetTransPos(BodyPart.Left_Elbow, L_Elbow);
+                SetTransPos(BodyPart.Left_Elbow, L_Elbow);
                 SetTransPos(BodyPart.Left_Hand, L_Hand);
 
             }//Left Hand, Elbow
             {
                 Vector3 L_Hand;
-                Vector3 L_Elbow = Arm_IK(false, ElbowOffset, DefaultPosRate, out L_Hand);
+                Vector3 L_Elbow;
+                Vector3 LocalHand = (predictor.results[10].Position - predictor.results[6].Position);
+                Vector3 LocalElbow = (predictor.results[8].Position - predictor.results[6].Position);
 
-                ActiveRightElbowIK = false;// predictor.results[8].Confidence < predictor.threshold;
-                // !Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
+                Vector3 R_DefaultPos = new Vector3(DefaultPosRate.x * -1, DefaultPosRate.y, DefaultPosRate.z).normalized;
 
-                if (ActiveRightElbowIK)
-                    SetTransPos(BodyPart.Right_Elbow, L_Elbow);
+                if (predictor.Visible(8) && predictor.Visible(10))
+                {
+                    L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(4);
+                    L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(5) + L_Elbow;
+
+                    L_Hand = HandZLimit(L_Hand);
+                    GetPool("R Hand").transform.position = L_Hand;
+
+                    L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.RightUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(4), PartDistance.GetVaule(5), out L_Hand);
+                }//Visible Elbow, Hand
+                else if ((predictor.Visible(8) == false) && predictor.Visible(10))
+                {
+                    L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + R_DefaultPos * PartDistance.GetVaule(4);
+
+                    float LocalHandDis = Mathf.Clamp01((predictor.results[10].Position - predictor.results[6].Position).magnitude / (predictor.results[5].Position - predictor.results[6].Position).magnitude);
+                    L_Hand = GetBonePos(HumanBodyBones.RightUpperArm) + LocalHandDis * Vector3.left * ((GetBonePos(HumanBodyBones.LeftUpperArm) - GetBonePos(HumanBodyBones.RightUpperArm)).magnitude) * ShoulderWidth;
+
+                    L_Hand = HandZLimit(L_Hand);
+
+                    GetPool("R Hand").transform.position = L_Hand;
+
+                }//Visible Hand
+                else if (predictor.Visible(8) && ((predictor.Visible(10) == false)))
+                {
+                    L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(4);
+                    L_Hand = L_Elbow + LocalElbow.normalized * PartDistance.GetVaule(5);
+
+                    L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.RightUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(4), PartDistance.GetVaule(5), out L_Hand);
+                }//Visible Elbow
+                else
+                {
+                    L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + R_DefaultPos * PartDistance.GetVaule(4);
+                    L_Hand = L_Elbow + R_DefaultPos * PartDistance.GetVaule(5);
+
+                    L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.RightUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(4), PartDistance.GetVaule(5), out L_Hand);
+                }//No Visible Elbow, Hand
+
+                //=========================================================================================== Arm Z Limit 적용 / 어깨중심이 X : 0 이고 , 비율은 Clamp01((보정전 손위치.X - Offset) / 팔길이) / 함수화 하기
+
+                SetTransPos(BodyPart.Right_Elbow, L_Elbow);
                 SetTransPos(BodyPart.Right_Hand, L_Hand);
             }//Right Hand, Elbow
         }//팔 IK
 
-        animator.SetBoneLocalRotation(HumanBodyBones.Head, Quaternion.Euler((HeadRotationRate * 90)));
+        Vector3 ShoulderDir = predictor.results[5].Position - predictor.results[6].Position;
+        Vector3 BodyTilling = new Vector3(0, 0, Mathf.Atan2(ShoulderDir.y, ShoulderDir.x) * Mathf.Rad2Deg);
+        animator.SetBoneLocalRotation(HumanBodyBones.Chest, Quaternion.Euler(BodyTilling));//몸 기울기
+
+        animator.SetBoneLocalRotation(HumanBodyBones.Head, Quaternion.Euler((HeadRotationRate * 90) - BodyTilling));//머리회전값들 적용
+
         {
 
             {
@@ -452,6 +521,17 @@ animator.SetIKPosition(AvatarIKGoal.RightHand, GetTransPos(BodyPart.Right_Hand))
         pos += ProjectOffset;
 
         return pos;
+    }
+
+    public Vector3 HandZLimit(Vector3 Hand)
+    {
+        Vector3 ModelAverageShoulder = ((GetBonePos(HumanBodyBones.LeftUpperArm) + GetBonePos(HumanBodyBones.RightUpperArm))) * 0.5f;
+
+        float rate = (Mathf.Abs((Hand - ModelAverageShoulder).x) / (predictor.results[5].Position - predictor.results[6].Position).magnitude) - Arm_ZLimitOffsetRate;
+
+        Hand += Vector3.forward * (Arm_ZLimitCurve.Evaluate(rate) * Arm_ZLimit * -1);
+
+        return Hand;
     }
 
     /// <summary>

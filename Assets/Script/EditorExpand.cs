@@ -55,9 +55,12 @@ namespace Expand
             Rect LdrawRect = new Rect(DrawRect.x, DrawRect.y, Size, DrawRect.height);
 
             EditorGUI.LabelField(LdrawRect, Text);
-            return new Rect(LdrawRect.x + Size, LdrawRect.y, Pos.width - Size, LdrawRect.height);
+            return new Rect(LdrawRect.x + Size, LdrawRect.y, DrawRect.width - Size, LdrawRect.height);
         }
 
+        /// <summary>
+        /// Use AttributeLayerMask
+        /// </summary>
         public static int LayerMaskField(Rect pos, string label, int Layers, float Space = 0)
         {
             {/*
@@ -98,6 +101,9 @@ namespace Expand
 
             return EditorGUI.MaskField(LRect, Layers, UnityEditorInternal.InternalEditorUtility.layers);
         }
+        /// <summary>
+        /// Use AttributeLayerMask
+        /// </summary>
         public static LayerMask LayerMaskField(Rect pos, string label, LayerMask Layers)
         {
             return LayerMaskField(pos, label, Layers.value);
@@ -130,6 +136,7 @@ namespace Expand
             return new Rect((LRect.x + ((pos.width) / LineAmount)), DrawRect.y, ((pos.width) / LineAmount), DrawRect.height);
         }
 
+        [System.Obsolete("No Need FieldInfo, Type  / Use GetPropertyDrawerTarget(SerializedProperty property)")]
         /// <summary>
         /// NotWork Include List, Array But Can Make Support / T - Find Type
         /// </summary>
@@ -184,6 +191,43 @@ namespace Expand
             return Lobj;
         }//리스트와 배열이 있는경우는 미구현
 
+        public static object GetPropertyDrawerTarget(SerializedProperty property)
+        {
+            var paths = property.propertyPath.Split('.');
+            object LChildObj = property.serializedObject.targetObject.GetType().GetField(paths[0])
+                                .GetValue(property.serializedObject.targetObject);
+            int arrayIndex = -1;
+            for (int i = 1; i < paths.Length; i++)
+            {
+                if (string.Equals(paths[i], "Array"))
+                {
+                    arrayIndex = i + 1;
+                }
+                else
+                {
+                    if (i == arrayIndex)
+                    {
+                        //LChildField = LChildField.FieldType.MakeArrayType(stringToint(paths[i]));
+                        LChildObj = (LChildObj as IList)[StringToInt(paths[i])];
+                    }
+                    else
+                    {
+                        //LChildField = LChildField.FieldType.GetField(paths[i]);//---필요 없는거였어
+
+                        if (i + 1 != paths.Length)
+                        {
+                            LChildObj = LChildObj.GetType().GetField(paths[i]).GetValue(LChildObj);
+                        }//LChildField 보다 1단계 상위에 있어야함
+                    }
+                }
+            }
+            return LChildObj;
+            //return GetPropertyDrawerTarget<T>(property.serializedObject.targetObject.GetType().GetField(property.name), property);
+        }
+        public static int StringToInt(string text)
+        {
+            return int.Parse(System.Text.RegularExpressions.Regex.Replace(text, @"\D", ""));
+        }
         public static System.Type PropertyTypeToType(string propertyType)
         {
             switch (propertyType)

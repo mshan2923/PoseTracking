@@ -529,7 +529,7 @@ MonoBehaviour:
   Active: 1
   Aspect: 1.333
   LoopDelay: 0.1
-  threshold: 0.2
+  threshold: 0.3
   results:
   - Part: 0
     Position: {x: 0, y: 0}
@@ -601,7 +601,7 @@ GameObject:
   - component: {fileID: 1185894584}
   - component: {fileID: 1185894583}
   m_Layer: 0
-  m_Name: 'FixIt : HeadYaw , BodyTilling , FPS / Elbow Default Pos'
+  m_Name: FixIt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -615,15 +615,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1185894582}
-  m_Text: 'HeadYaw - use World Pos <= Fixed
-
-
-    Elbow Default Pos -
-
-    -> Visible
-    Only Hand => Elbow : (0,0,0)
-
-    BodyTilling'
+  m_Text: 
   m_OffsetZ: 0
   m_CharacterSize: 1
   m_LineSpacing: 1
@@ -1054,6 +1046,16 @@ PrefabInstance:
       objectReference: {fileID: 704765959}
     - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
         type: 3}
+      propertyPath: ShoulderWidth
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
+        type: 3}
+      propertyPath: Arm_ZLimitOffsetRate
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
+        type: 3}
       propertyPath: DebugPoints.Array.size
       value: 0
       objectReference: {fileID: 0}
@@ -1064,13 +1066,28 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
         type: 3}
+      propertyPath: Arm_ZLimitCurve.m_Curve.Array.data[0].value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
+        type: 3}
+      propertyPath: Arm_ZLimitCurve.m_Curve.Array.data[1].value
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
+        type: 3}
       propertyPath: Arm_ZLimitCurve.m_Curve.Array.data[1].inSlope
-      value: 2
+      value: -1.9602588
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
+        type: 3}
+      propertyPath: Arm_ZLimitCurve.m_Curve.Array.data[1].inWeight
+      value: 0.10894543
       objectReference: {fileID: 0}
     - target: {fileID: 7752324996891017263, guid: 979aeec144ebeed45b061c44650edaa4,
         type: 3}
       propertyPath: Arm_ZLimitCurve.m_Curve.Array.data[1].outSlope
-      value: 2
+      value: -1.9602588
       objectReference: {fileID: 0}
     - target: {fileID: 7791073422274947010, guid: 979aeec144ebeed45b061c44650edaa4,
         type: 3}
