@@ -30,8 +30,9 @@ public class Project2DTo3D : MonoBehaviour
     public Vector3 DefaultPosition = new Vector3(0, -1.25f, 0);
     public Vector3 DefaultPosRate = new Vector3(0.3f, -1, 0);
 
-    [Space(5), Header(@"Debug")]
     public Map<BodyPart, float> PartDistance = new();//시작할때 길이를 재서 IK에 주로 씀
+    [Space(5), Header(@"Debug")]
+    public bool Debugging = true;
     public List<GameObject> DebugPoints = new();
     public GameObject DebugObj;
     public float DebugPointsOffset = -0.3f;
@@ -92,6 +93,11 @@ public class Project2DTo3D : MonoBehaviour
             SmoothPos.Add(BodyPart.Right_Elbow, Vector3.zero);
             SmoothPos.Add(BodyPart.Right_Hand, Vector3.zero);
         }
+
+        if (IK_Target.Count == 0)
+        {
+            Debug.LogWarning("Not Setting Rig Builder - IK");
+        }
     }
 
     void Update()
@@ -134,16 +140,29 @@ public class Project2DTo3D : MonoBehaviour
             }
         }//Setup Smooth
 
-        GetIKTarget(BodyPart.Left_Hand).transform.rotation = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm).rotation;
+        if (IK_Target.Count > 0)
+        {
+            //GetIKTarget(BodyPart.Left_Hand).transform.rotation = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm).rotation;// 기존 SD 쓸뗀 되는데??
+            GetIKTarget(BodyPart.Left_Hand).transform.localRotation = Quaternion.LookRotation(GetSmoothPos(BodyPart.Left_Hand) - GetSmoothPos(BodyPart.Left_Elbow)) * Quaternion.Euler(Vector3.right * 90);
 
-        GetIKTarget(BodyPart.Left_Elbow).transform.position = GetSmoothPos(BodyPart.Left_Elbow);
-        GetIKTarget(BodyPart.Left_Hand).transform.position = GetSmoothPos(BodyPart.Left_Hand);// OnAnimatorIK안에 있을때 안됨
+            GetIKTarget(BodyPart.Left_Elbow).transform.position = GetSmoothPos(BodyPart.Left_Elbow);
+            GetIKTarget(BodyPart.Left_Hand).transform.position = GetSmoothPos(BodyPart.Left_Hand);// OnAnimatorIK안에 있을때 안됨
 
+            //animator.SetIKRotation(AvatarIKGoal.LeftHand, animator.GetIKRotation(AvatarIKGoal.LeftHand));
+            //animator.SetBoneLocalRotation(HumanBodyBones.LeftHand, Quaternion.identity);
 
-        GetIKTarget(BodyPart.Right_Hand).transform.rotation = animator.GetBoneTransform(HumanBodyBones.RightLowerArm).rotation;
+            //----
 
-        GetIKTarget(BodyPart.Right_Elbow).transform.position = GetSmoothPos(BodyPart.Right_Elbow);
-        GetIKTarget(BodyPart.Right_Hand).transform.position = GetSmoothPos(BodyPart.Right_Hand);
+            //GetIKTarget(BodyPart.Right_Hand).transform.rotation = animator.GetBoneTransform(HumanBodyBones.RightLowerArm).rotation;// 기존 SD 쓸뗀 되는데?? / 빼면 항상 위로
+            GetIKTarget(BodyPart.Right_Hand).transform.localRotation = Quaternion.LookRotation(GetSmoothPos(BodyPart.Right_Hand) - GetSmoothPos(BodyPart.Right_Elbow)) * Quaternion.Euler(Vector3.right * 90);
+
+            GetIKTarget(BodyPart.Right_Elbow).transform.position = GetSmoothPos(BodyPart.Right_Elbow);
+            GetIKTarget(BodyPart.Right_Hand).transform.position = GetSmoothPos(BodyPart.Right_Hand);
+
+            //animator.SetIKRotation(AvatarIKGoal.RightHand, animator.GetIKRotation(AvatarIKGoal.RightHand));
+            //animator.SetBoneLocalRotation(HumanBodyBones.RightHand, Quaternion.identity);
+        }
+
     }
 
     private void OnAnimatorIK(int layerIndex)
@@ -275,26 +294,16 @@ public class Project2DTo3D : MonoBehaviour
                     L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3) + L_Elbow;
 
                     L_Hand = HandZLimit(L_Hand);
-                    GetPool("L Hand").transform.position = L_Hand;
 
-                    //GetPool("ReScaled Left Elbow").transform.position = L_Elbow;
-                    //GetPool("ReScaled Left Hand").transform.position = L_Hand;
                     //===========2D 기준 위치 , 보정작업하면 될듯?
 
                     L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.LeftUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(2), PartDistance.GetVaule(3), out L_Hand);
 
-                    //GetPool("IkLeft Elbow").transform.position = L_Elbow;
-                    //GetPool("IkLeft Hand").transform.position = L_Hand;
                 }//Visible Elbow, Hand => 인식률 매우 좋음!!
                 else if ((predictor.Visible(7) == false) && predictor.Visible(9))
                 {
-                    // 계산식을 좀 바꿔야함
-                    //음... 팔꿈치 위치를 기본 위치로해서 보정하면?
-
                     L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + DefaultPosRate.normalized * PartDistance.GetVaule(2);
-                    //L_Hand = L_Elbow + DefaultPosRate.normalized * PartDistance.GetVaule(3);//====임시용 기본위치
 
-                    //GetPool("Default Elbow").transform.position = L_Elbow;
                     {
                         //    elbow는 기본위치에 고정 되어있고, 손만 입력을 받아 움ㅈ직임 , 움직임 비율을 어께너비와 비례해서
                         float LocalHandDis = Mathf.Clamp01((predictor.results[9].Position - predictor.results[5].Position).magnitude / (predictor.results[5].Position - predictor.results[6].Position).magnitude);
@@ -303,7 +312,6 @@ public class Project2DTo3D : MonoBehaviour
                     }//어께너비 비례해서 손위치 대강 잡고 , 보정 
 
                     L_Hand = HandZLimit(L_Hand);
-                    GetPool("L Hand").transform.position = L_Hand;
 
                     {
                         //빠르게 흔들면 인식자체가 잘안됨 , 인식률 0.08까지 내려가던데
@@ -340,10 +348,6 @@ public class Project2DTo3D : MonoBehaviour
 
                 }//No Visible Elbow, Hand
 
-                //ActiveLeftElbowIK = predictor.results[7].Confidence > predictor.threshold;//=========== False 일때 문제발생, Elbow를 보정된 기본 위치로
-                //!Mathf.Approximately(L_Elbow.sqrMagnitude, 0);
-
-                //if (ActiveLeftElbowIK)
                 SetTransPos(BodyPart.Left_Elbow, L_Elbow);
                 SetTransPos(BodyPart.Left_Hand, L_Hand);
 
@@ -362,7 +366,6 @@ public class Project2DTo3D : MonoBehaviour
                     L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(5) + L_Elbow;
 
                     L_Hand = HandZLimit(L_Hand);
-                    GetPool("R Hand").transform.position = L_Hand;
 
                     L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.RightUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(4), PartDistance.GetVaule(5), out L_Hand);
                 }//Visible Elbow, Hand
@@ -374,8 +377,6 @@ public class Project2DTo3D : MonoBehaviour
                     L_Hand = GetBonePos(HumanBodyBones.RightUpperArm) + LocalHandDis * Vector3.left * ((GetBonePos(HumanBodyBones.LeftUpperArm) - GetBonePos(HumanBodyBones.RightUpperArm)).magnitude) * ShoulderWidth;
 
                     L_Hand = HandZLimit(L_Hand);
-
-                    GetPool("R Hand").transform.position = L_Hand;
 
                 }//Visible Hand
                 else if (predictor.Visible(8) && ((predictor.Visible(10) == false)))
@@ -393,11 +394,11 @@ public class Project2DTo3D : MonoBehaviour
                     L_Elbow = Arm_IK(GetBonePos(HumanBodyBones.RightUpperArm), L_Elbow, L_Hand, ElbowOffset, PartDistance.GetVaule(4), PartDistance.GetVaule(5), out L_Hand);
                 }//No Visible Elbow, Hand
 
-                //=========================================================================================== Arm Z Limit 적용 / 어깨중심이 X : 0 이고 , 비율은 Clamp01((보정전 손위치.X - Offset) / 팔길이) / 함수화 하기
 
                 SetTransPos(BodyPart.Right_Elbow, L_Elbow);
                 SetTransPos(BodyPart.Right_Hand, L_Hand);
             }//Right Hand, Elbow
+
         }//팔 IK
 
         Vector3 ShoulderDir = predictor.results[5].Position - predictor.results[6].Position;
@@ -882,45 +883,55 @@ animator.SetIKPosition(AvatarIKGoal.RightHand, GetTransPos(BodyPart.Right_Hand))
         return false;
     }
 
-    public GameObject GetPool(string name = "")
+    public GameObject GetPool(Vector3 pos, string name = "")
     {
-        for (int i = 0; i < DebugPoints.Count; i++)
+        if (Debugging)
         {
-            if (!DebugPoints[i].activeSelf)
+            for (int i = 0; i < DebugPoints.Count; i++)
             {
-                DebugPoints[i].SetActive(true);
+                if (!DebugPoints[i].activeSelf)
+                {
+                    DebugPoints[i].SetActive(true);
+
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        DebugPoints[i].name = name;
+                    }
+
+                    DebugPoints[i].transform.position = pos;
+                    return DebugPoints[i];
+                }
+            }
+
+            if (DebugObj != null)
+            {
+                var obj = GameObject.Instantiate(DebugObj);
+                DebugPoints.Add(obj);
+                //obj.transform.SetParent(gameObject.transform);
 
                 if (!string.IsNullOrEmpty(name))
                 {
-                    DebugPoints[i].name = name;
+                    obj.name = name;
                 }
 
-                return DebugPoints[i];
+                obj.transform.position = pos;
+                return obj;
             }
-        }
-
-        if (DebugObj != null)
-        {
-            var obj = GameObject.Instantiate(DebugObj);
-            DebugPoints.Add(obj);
-            //obj.transform.SetParent(gameObject.transform);
-
-            if (!string.IsNullOrEmpty(name))
+            else
             {
-                obj.name = name;
+                return null;
             }
-
-            return obj;
-        } else
-        {
-            return null;
         }
+        return null;
     }
     public void AllReturnPool()
     {
-        for (int i = 0; i < DebugPoints.Count; i++)
+        if (Debugging)
         {
-            DebugPoints[i].SetActive(false);
+            for (int i = 0; i < DebugPoints.Count; i++)
+            {
+                DebugPoints[i].SetActive(false);
+            }
         }
     }
 

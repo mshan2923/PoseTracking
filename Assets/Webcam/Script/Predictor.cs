@@ -82,8 +82,6 @@ public class Predictor : MonoBehaviour//=================MoveNetVisualizer Âü°íÇ
     public float DebugZPos = 10f;
     public float TestPlaneDis = 100;
 
-
-
     private void OnEnable()
     {
         Camera.main.gameObject.transform.position = Vector3.zero;
@@ -122,6 +120,10 @@ public class Predictor : MonoBehaviour//=================MoveNetVisualizer Âü°íÇ
 
         //DetectLoop();
         StartCoroutine(DetectCoroutine());
+
+
+        cameraView.enabled = ActiveDebug;
+        visualizer.enabled = ActiveDebug;
     }
 
     // Update is called once per frame
@@ -144,8 +146,11 @@ public class Predictor : MonoBehaviour//=================MoveNetVisualizer Âü°íÇ
                 // Detect pose
                 var pose = predictor.Predict(ImageFeature);
                 // Vsialize
-                imageTexture = ImageFeature.ToTexture(imageTexture);
-                visualizer.Render(imageTexture, pose);
+                if (ActiveDebug)
+                {
+                    imageTexture = ImageFeature.ToTexture(imageTexture);
+                    visualizer.Render(imageTexture, pose);
+                }
 
             }
 
@@ -167,9 +172,13 @@ public class Predictor : MonoBehaviour//=================MoveNetVisualizer Âü°íÇ
 
                 // Detect pose
                 var pose = predictor.Predict(ImageFeature);
-                // Vsialize
-                imageTexture = ImageFeature.ToTexture(imageTexture);
-                visualizer.Render(imageTexture, pose);
+
+                if (ActiveDebug)
+                {
+                    // Vsialize
+                    imageTexture = ImageFeature.ToTexture(imageTexture);
+                    visualizer.Render(imageTexture, pose);
+                }
 
                 for (int i = 0; i < 17; i++)
                 {
