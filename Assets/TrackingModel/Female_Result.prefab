@@ -52,7 +52,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -8916418232052550782, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
+  - {fileID: -1580535799172915004, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1580,8 +1580,8 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -8352757202894166260, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
-  - {fileID: 4504875206402336086, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
+  - {fileID: 2100000, guid: 93c4369f5415640efb071ca888c5746f, type: 2}
+  - {fileID: 8164003090506693141, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
   - {fileID: -1580535799172915004, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
@@ -3281,9 +3281,9 @@ GameObject:
   - component: {fileID: 6126887731503669779}
   - component: {fileID: 281263022683748457}
   - component: {fileID: 5948598232778327538}
-  - component: {fileID: 5948598232778327539}
   - component: {fileID: 5948598232778327550}
   - component: {fileID: 5948598232778327549}
+  - component: {fileID: 430336869}
   m_Layer: 0
   m_Name: Female_Result
   m_TagString: Untagged
@@ -3429,14 +3429,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!81 &5948598232778327539
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6795020628249933993}
-  m_Enabled: 1
 --- !u!114 &5948598232778327550
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3454,17 +3446,19 @@ MonoBehaviour:
   CameraView: {fileID: 0}
   MovementMultiply: {x: 1, y: 1, z: 0.5}
   Z_Position: 0.2
-  ProjectOffset: {x: 0, y: 0.1, z: -1}
+  ProjectOffset: {x: 0, y: 0.15, z: -1}
   ProjectScaleOffset: 0.3
   DefaultPosition: {x: 0, y: -1, z: 1}
   DefaultPosRate: {x: 0.3, y: -1, z: 0}
+  HandSensitive: 1.1
   PartDistance:
     Slots: []
+  Debugging: 0
   DebugPoints: []
   DebugObj: {fileID: 3460215014411829058, guid: 50174e37c42874045b9d11e3ebe9a814,
     type: 3}
   DebugPointsOffset: -0.3
-  HeadRotationMultiply: {x: 0.2, y: 0.75, z: 0.75}
+  HeadRotationMultiply: {x: 0.2, y: -1.25, z: 2}
   HeadRotationRate: {x: 0, y: 0, z: 0}
   IK_Target:
     Slots:
@@ -3476,7 +3470,7 @@ MonoBehaviour:
       Vaule: {fileID: 5948598231653276574}
     - Key: 5
       Vaule: {fileID: 5948598232022663081}
-  Arm_ZLimitOffsetRate: 0.1
+  Arm_ZLimitOffsetRate: 0
   Arm_ZLimitCurve:
     serializedVersion: 2
     m_Curve:
@@ -3501,8 +3495,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  Arm_ZLimit: -0.15
-  ShoulderWidth: 1
+  Arm_ZLimit: -0.1
+  ShoulderWidth: 1.25
   TransPos:
     Slots: []
   SmoothPos:
@@ -3512,7 +3506,7 @@ MonoBehaviour:
   LeftUpperTest: {x: 1, y: 1, z: 0}
   LeftLowerTest: {x: 1, y: 1, z: 0}
   IKTarget: {fileID: 0}
-  MovementSpeed: 50
+  MovementSpeed: 100
 --- !u!114 &5948598232778327549
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3529,19 +3523,44 @@ MonoBehaviour:
   Vaule:
     Slots:
     - Key: EyeUpper
-      Vaule: 25
+      Vaule: 35
     - Key: EyeLower
       Vaule: 0
   JawDefault: {x: 0, y: 0, z: 0, w: 0}
   BlinkEye: 1
   BlinkMinInterval: 1
   BlinkMaxInterval: 5
-  BlinkSpeed: 0.05
+  BlinkSpeed: 0.01
   UpperEye: 25
   Mic_Sensitivity: 75
   loudness: 0
   SpeakOpenIndex: 1
   MouseOpenAngle: 10
+--- !u!114 &430336869
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6795020628249933993}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 689ef2d8885a5fb4da077dd0c6f48d69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Target:
+  - Target: {fileID: 1550053442751803361}
+    Default: {x: 0, y: 0, z: 0}
+    Limit_X: 0
+    Limit_Y: 1
+    Limit_Z: 0
+    LimitAngle: {x: 0, y: 25, z: 0}
+  - Target: {fileID: 166136023072473325}
+    Default: {x: 0, y: 0, z: 0}
+    Limit_X: 0
+    Limit_Y: 1
+    Limit_Z: 0
+    LimitAngle: {x: 0, y: 25, z: 0}
 --- !u!1 &6893859779591812801
 GameObject:
   m_ObjectHideFlags: 0
@@ -4306,7 +4325,7 @@ SkinnedMeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: -9103484930961366303, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
-  - {fileID: -616997509834768387, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
+  - {fileID: 2100000, guid: dd2a9f41c1191934b91ec5429c6f7ede, type: 2}
   - {fileID: -1580535799172915004, guid: a08c4f716eca9b44291c3b0d221f3ba7, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
@@ -4414,7 +4433,7 @@ SkinnedMeshRenderer:
   - {fileID: 9071486213494137587}
   - {fileID: 7473859131079381281}
   m_BlendShapeWeights:
-  - 25
+  - 35
   - 0
   - 50
   m_RootBone: {fileID: 5645095081335706752}

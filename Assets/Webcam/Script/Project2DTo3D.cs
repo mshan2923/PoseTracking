@@ -29,6 +29,7 @@ public class Project2DTo3D : MonoBehaviour
     public float ProjectScaleOffset = 0.3f;
     public Vector3 DefaultPosition = new Vector3(0, -1.25f, 0);
     public Vector3 DefaultPosRate = new Vector3(0.3f, -1, 0);
+    public float HandSensitive = 1.5f;
 
     public Map<BodyPart, float> PartDistance = new();//시작할때 길이를 재서 IK에 주로 씀
     [Space(5), Header(@"Debug")]
@@ -36,6 +37,8 @@ public class Project2DTo3D : MonoBehaviour
     public List<GameObject> DebugPoints = new();
     public GameObject DebugObj;
     public float DebugPointsOffset = -0.3f;
+    //public string LeftArmState = "";
+    //public string RightArmState = "";
 
     [Space(10)]
     //public float FaceWideRate = 0.8f;
@@ -143,7 +146,11 @@ public class Project2DTo3D : MonoBehaviour
         if (IK_Target.Count > 0)
         {
             //GetIKTarget(BodyPart.Left_Hand).transform.rotation = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm).rotation;// 기존 SD 쓸뗀 되는데??
-            GetIKTarget(BodyPart.Left_Hand).transform.localRotation = Quaternion.LookRotation(GetSmoothPos(BodyPart.Left_Hand) - GetSmoothPos(BodyPart.Left_Elbow)) * Quaternion.Euler(Vector3.right * 90);
+
+            //Vector3 LeftTemp = (Quaternion.LookRotation(GetSmoothPos(BodyPart.Left_Hand) - GetSmoothPos(BodyPart.Left_Elbow), gameObject.transform.up) * Quaternion.Euler(Vector3.right * 90)).eulerAngles;
+            //LeftTemp.y = Mathf.Clamp(LeftTemp.y, -90, 90);
+            GetIKTarget(BodyPart.Left_Hand).transform.localRotation = 
+                (Quaternion.LookRotation(GetSmoothPos(BodyPart.Left_Hand) - GetSmoothPos(BodyPart.Left_Elbow), gameObject.transform.up) * Quaternion.Euler(Vector3.right * 90));
 
             GetIKTarget(BodyPart.Left_Elbow).transform.position = GetSmoothPos(BodyPart.Left_Elbow);
             GetIKTarget(BodyPart.Left_Hand).transform.position = GetSmoothPos(BodyPart.Left_Hand);// OnAnimatorIK안에 있을때 안됨
@@ -151,10 +158,13 @@ public class Project2DTo3D : MonoBehaviour
             //animator.SetIKRotation(AvatarIKGoal.LeftHand, animator.GetIKRotation(AvatarIKGoal.LeftHand));
             //animator.SetBoneLocalRotation(HumanBodyBones.LeftHand, Quaternion.identity);
 
-            //----
+            //------------------------------------------------------------------------------------------------------------------------------------------------------------------- ===== 완전 지멋대로 여서....
 
             //GetIKTarget(BodyPart.Right_Hand).transform.rotation = animator.GetBoneTransform(HumanBodyBones.RightLowerArm).rotation;// 기존 SD 쓸뗀 되는데?? / 빼면 항상 위로
-            GetIKTarget(BodyPart.Right_Hand).transform.localRotation = Quaternion.LookRotation(GetSmoothPos(BodyPart.Right_Hand) - GetSmoothPos(BodyPart.Right_Elbow)) * Quaternion.Euler(Vector3.right * 90);
+
+            Vector3 RightTemp = (Quaternion.LookRotation(GetSmoothPos(BodyPart.Right_Hand) - GetSmoothPos(BodyPart.Right_Elbow), gameObject.transform.up) * Quaternion.Euler(Vector3.right * 90)).eulerAngles;
+            RightTemp.y = Mathf.Clamp(RightTemp.y, -90, 90);
+            GetIKTarget(BodyPart.Right_Hand).transform.localRotation = Quaternion.Euler(RightTemp);
 
             GetIKTarget(BodyPart.Right_Elbow).transform.position = GetSmoothPos(BodyPart.Right_Elbow);
             GetIKTarget(BodyPart.Right_Hand).transform.position = GetSmoothPos(BodyPart.Right_Hand);
@@ -287,11 +297,15 @@ public class Project2DTo3D : MonoBehaviour
                 Vector3 LocalElbow = (predictor.results[7].Position - predictor.results[5].Position);
                 if (predictor.Visible(7) && predictor.Visible(9))
                 {
+                    //LeftArmState = "Visible All";
+
                     //====Elbow는 LocalElbow.normalized 해서 모델의 UpperArm 길이 적용한거리 => 모델스케일 Elobw
                     //====Hand는 (LocalHand - LocalElbow).normalized * 모델의 LowerArm 길이 + 모델스케일 Elobw => 모델 스케일 Hand
+                    float LocalHandDis = Mathf.Clamp01((predictor.results[9].Position - predictor.results[5].Position).magnitude / (predictor.results[5].Position - predictor.results[6].Position).magnitude);
 
                     L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2);
-                    L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3) + L_Elbow;
+                    L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(3) + L_Elbow + (Vector3.right * (HandSensitive - 1f) * LocalHandDis * (PartDistance.GetVaule(2) + PartDistance.GetVaule(3)));
+                    //===========================Vector3.right * (민감도 - 1) * (어깨 ~ 손간의 거리 / 팔길이)
 
                     L_Hand = HandZLimit(L_Hand);
 
@@ -302,6 +316,8 @@ public class Project2DTo3D : MonoBehaviour
                 }//Visible Elbow, Hand => 인식률 매우 좋음!!
                 else if ((predictor.Visible(7) == false) && predictor.Visible(9))
                 {
+                    //LeftArmState = "Only Visible Hand";
+
                     L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + DefaultPosRate.normalized * PartDistance.GetVaule(2);
 
                     {
@@ -332,6 +348,8 @@ public class Project2DTo3D : MonoBehaviour
                 }//Visible Hand
                 else if (predictor.Visible(7) && ((predictor.Visible(9) == false)))
                 {
+                    //LeftArmState = "Only Visible Elbow";
+
                     //손 위치만 방향에 맞춰서
                     L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(2);
                     L_Hand = L_Elbow + LocalElbow.normalized * PartDistance.GetVaule(3);
@@ -340,6 +358,8 @@ public class Project2DTo3D : MonoBehaviour
                 }//Visible Elbow
                 else
                 {
+                   // LeftArmState = "No Visible";
+
                     // 기본위치로 / DefaultPosRate 방향에 맞춰서 
                     L_Elbow = GetBonePos(HumanBodyBones.LeftUpperArm) + DefaultPosRate.normalized * PartDistance.GetVaule(2);
                     L_Hand = L_Elbow + DefaultPosRate.normalized * PartDistance.GetVaule(3);
@@ -348,6 +368,7 @@ public class Project2DTo3D : MonoBehaviour
 
                 }//No Visible Elbow, Hand
 
+                //손만 보이는경우가 잘 없긴한데 , 설정을 해야 팔을 잘 안내려놓음
                 SetTransPos(BodyPart.Left_Elbow, L_Elbow);
                 SetTransPos(BodyPart.Left_Hand, L_Hand);
 
@@ -362,8 +383,12 @@ public class Project2DTo3D : MonoBehaviour
 
                 if (predictor.Visible(8) && predictor.Visible(10))
                 {
+                    //RightArmState = "Visible All";
+                    float LocalHandDis = Mathf.Clamp01((predictor.results[10].Position - predictor.results[6].Position).magnitude / (predictor.results[5].Position - predictor.results[6].Position).magnitude);
+
                     L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(4);
-                    L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(5) + L_Elbow;
+                    L_Hand = (LocalHand - LocalElbow).normalized * PartDistance.GetVaule(5) + L_Elbow + (Vector3.left * (HandSensitive - 1f) * LocalHandDis * (PartDistance.GetVaule(4) + PartDistance.GetVaule(5)));
+                    //===========================Vector3.right * (민감도 - 1) * (어깨 ~ 손간의 거리 / 팔길이)
 
                     L_Hand = HandZLimit(L_Hand);
 
@@ -371,6 +396,8 @@ public class Project2DTo3D : MonoBehaviour
                 }//Visible Elbow, Hand
                 else if ((predictor.Visible(8) == false) && predictor.Visible(10))
                 {
+                    //RightArmState = "Only Visible Hand";
+
                     L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + R_DefaultPos * PartDistance.GetVaule(4);
 
                     float LocalHandDis = Mathf.Clamp01((predictor.results[10].Position - predictor.results[6].Position).magnitude / (predictor.results[5].Position - predictor.results[6].Position).magnitude);
@@ -381,6 +408,8 @@ public class Project2DTo3D : MonoBehaviour
                 }//Visible Hand
                 else if (predictor.Visible(8) && ((predictor.Visible(10) == false)))
                 {
+                    //RightArmState = "Only Visible Elbow";
+
                     L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + LocalElbow.normalized * PartDistance.GetVaule(4);
                     L_Hand = L_Elbow + LocalElbow.normalized * PartDistance.GetVaule(5);
 
@@ -388,6 +417,8 @@ public class Project2DTo3D : MonoBehaviour
                 }//Visible Elbow
                 else
                 {
+                    //RightArmState = "No Visible";
+
                     L_Elbow = GetBonePos(HumanBodyBones.RightUpperArm) + R_DefaultPos * PartDistance.GetVaule(4);
                     L_Hand = L_Elbow + R_DefaultPos * PartDistance.GetVaule(5);
 

@@ -601,7 +601,7 @@ GameObject:
   - component: {fileID: 1185894584}
   - component: {fileID: 1185894583}
   m_Layer: 0
-  m_Name: FixIt - None
+  m_Name: FixIt - Hand
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -615,7 +615,8 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1185894582}
-  m_Text: 
+  m_Text: "\uC190\uBC29\uD5A5\uC774... \uC6D4\uB4DC \uAE30\uC900\uC73C\uB85C \uACC4\uC0B0
+    \uD574\uC57C\uD560\uB4EF"
   m_OffsetZ: 0
   m_CharacterSize: 1
   m_LineSpacing: 1
@@ -1050,9 +1051,18 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 5948598232778327550, guid: dd4fab789b082564d9291a2d5f539696,
+    - target: {fileID: 430336869, guid: dd4fab789b082564d9291a2d5f539696, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5948598231819103329, guid: dd4fab789b082564d9291a2d5f539696,
         type: 3}
-      propertyPath: Debugging
+      propertyPath: m_Data.m_TargetRotationWeight
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5948598231819103329, guid: dd4fab789b082564d9291a2d5f539696,
+        type: 3}
+      propertyPath: m_Data.m_MaintainTargetRotationOffset
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5948598232778327550, guid: dd4fab789b082564d9291a2d5f539696,
@@ -1130,6 +1140,5 @@ PrefabInstance:
       propertyPath: m_Name
       value: Female_Result
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 5948598232778327539, guid: dd4fab789b082564d9291a2d5f539696, type: 3}
+    m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: dd4fab789b082564d9291a2d5f539696, type: 3}
