@@ -45,35 +45,55 @@ public class SoftBodyController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        MoveOffset = (Predictor.results[0].Position * 2).normalized - PreNosePos;
-        PreNosePos = (Predictor.results[0].Position * 2).normalized;
-        Movement += MoveOffset * Sensitive;
+        MoveOffset = ((Predictor.results[0].Position - (Vector2.one * 0.5f)) * 2).normalized - PreNosePos;
+        PreNosePos = ((Predictor.results[0].Position - (Vector2.one * 0.5f)) * 2).normalized;
+        Movement = MoveOffset * Sensitive;
         float dis = Movement.magnitude;
 
+        {
+            /*
+if (dis < Sensitive)
+{
+    AddForce(Movement.magnitude * Time.deltaTime * MoveOffset.normalized);
+
+    Movement -= (DecelerationRate) * Time.deltaTime * Movement;
+    for (int i = 0; i < RigidBones.Count; i++)
+    {
+        if (RigidBones[i].velocity != null)
+        {
+            RigidBones[i].velocity -= DecelerationRate * Time.deltaTime * RigidBones[i].velocity;
+        }
+        else
+        {
+            RigidBones[i].velocity = Vector3.zero;
+        }
+    }
+}
+else
+{
+    Movement = Vector2.zero;
+    for (int i = 0; i < RigidBones.Count; i++)
+    {
+        RigidBones[i].velocity = Vector3.zero;
+    }
+    RootBone.transform.localPosition = Vector3.zero;
+}*/
+        }
+
+        //RootBone.GetComponent<Rigidbody>().AddForce(Movement.x, Movement.y, 0, ForceMode.Impulse);//Work wall
         if (dis < Sensitive)
         {
-            AddForce(Movement.magnitude * Time.deltaTime * MoveOffset.normalized);
-
-            Movement -= (DecelerationRate) * Time.deltaTime * Movement;
             for (int i = 0; i < RigidBones.Count; i++)
             {
-                if (RigidBones[i].velocity != null)
-                {
-                    RigidBones[i].velocity -= DecelerationRate * Time.deltaTime * RigidBones[i].velocity;
-                }else
-                {
-                    RigidBones[i].velocity = Vector3.zero;
-                }
-            }
-        }else
-        {
-            Movement = Vector2.zero;
-            for (int i = 0; i < RigidBones.Count; i++)
-            {
-                RigidBones[i].velocity = Vector3.zero;
+                RigidBones[i].AddForce(new Vector3(Movement.x, Movement.y, 0) * Time.deltaTime, ForceMode.Impulse);
             }
             RootBone.transform.localPosition = Vector3.zero;
+            //Movement -= (DecelerationRate) * Time.deltaTime * Movement;
         }
+    }
+    private void LateUpdate()
+    {
+
     }
     IEnumerator Loop()
     {
